@@ -1,0 +1,134 @@
+{
+  "timestamp": 1793562213.7790554,
+  "suite_name": "Second Brain Full Stack Agent & LLM Evaluation",
+  "modules": {
+    "1_general_reasoning": {
+      "query": "Explain the difference between synchronous and asynchronous programming in Python with a brief example.",
+      "overall_quality_score": 95,
+      "correctness": 100,
+      "relevance": 100,
+      "clarity": 90,
+      "conciseness": 65,
+      "formatting": 95,
+      "latency_ms": 8118.4,
+      "tokens_per_sec": 159.8,
+      "has_structured_suggestions": false,
+      "model_used": "groq",
+      "status": "PASSED"
+    },
+    "2_rag_groundedness": {
+      "query": "What is Project Quantum Phoenix and what is its budget according to the uploaded documents?",
+      "retrieved_chunks_count": 1,
+      "context_relevance": 0.609,
+      "context_precision": 0.554,
+      "faithfulness": 0.937,
+      "groundedness": 0.93,
+      "latency_ms": 3844.9,
+      "sources_returned": 1,
+      "status": "PASSED"
+    },
+    "3_live_web_search": {
+      "query": "What are the latest updates on NVIDIA Blackwell GPU architectures and benchmarks?",
+      "web_sources_retrieved": 4,
+      "sources_preview": [
+        "NVIDIA Blackwell Architecture Sweeps MLPerf Training v5.1 Benchmarks | NVIDIA Technical Blog",
+        "What\u2019s New in NVIDIA Blackwell GPU Architecture? \u2013 Premio, Inc.",
+        "NVIDIA Blackwell GPUs: All You Need to Know"
+      ],
+      "latency_ms": 6328.8,
+      "status": "PASSED"
+    },
+    "4_jev_decision_engine": {
+      "test_cases": [
+        {
+          "query": "Write a Python script to sort a binary search tree",
+          "action_type": "mcp_tool",
+          "expected_utility": 0.907,
+          "candidates_ranked": 3,
+          "recommended_model": "groq"
+        },
+        {
+          "query": "What is the current price of Bitcoin today?",
+          "action_type": "direct_chat",
+          "expected_utility": 0.9012,
+          "candidates_ranked": 2,
+          "recommended_model": "gemini"
+        },
+        {
+          "query": "In my uploaded notes, what was Dr. Vance's conclusion?",
+          "action_type": "direct_chat",
+          "expected_utility": 0.9012,
+          "candidates_ranked": 1,
+          "recommended_model": "gemini"
+        },
+        {
+          "query": "Solve the integral of x^3 * cos(x) dx",
+          "action_type": "mcp_tool",
+          "expected_utility": 0.9405,
+          "candidates_ranked": 3,
+          "recommended_model": "groq"
+        }
+      ],
+      "all_utilities_valid": true,
+      "status": "PASSED"
+    },
+    "5_mcp_server": {
+      "tools_registered": [
+        "calculator",
+        "python_interpreter",
+        "sqlite_database_explorer",
+        "knowledge_rag_search",
+        "web_search",
+        "cache_inspector"
+      ],
+      "calculator_test": {
+        "expected": "20.0",
+        "got": "Result: 20.0",
+        "passed": true
+      },
+      "python_test": {
+        "expected": "15",
+        "got": "15",
+        "passed": true
+      },
+      "sqlite_test": {
+        "tables_found": true,
+        "passed": true
+      },
+      "status": "PASSED"
+    },
+    "6_caching_system": {
+      "cold_miss_verified": true,
+      "exact_hit_verified": true,
+      "exact_hit_latency_ms": 0.71,
+      "semantic_hit_verified": true,
+      "semantic_hit_latency_ms": 337.13,
+      "semantic_similarity_score": 0.874,
+      "total_cache_hits": 2,
+      "status": "PASSED"
+    },
+    "7_safety_guardrails": {
+      "jailbreak_detected": true,
+      "safe_input_allowed": true,
+      "agent_block_verified": true,
+      "hallucination_engine_active": true,
+      "status": "PASSED"
+    },
+    "8_performance_telemetry": {
+      "avg_pipeline_latency_ms": 6097.4,
+      "avg_throughput_tok_sec": 159.8,
+      "total_cost_usd": 0.002659,
+      "telemetry_recorded_count": 3,
+      "status": "PASSED"
+    }
+  },
+  "summary": {
+    "total_tests": 8,
+    "passed_tests": 8,
+    "failed_tests": 0,
+    "overall_score_pct": 100.0,
+    "avg_latency_ms": 6097.4,
+    "avg_tokens_per_sec": 159.8,
+    "total_cost_usd": 0.002659
+  }
+}

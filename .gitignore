@@ -1,0 +1,24 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Data (documents, vectors, chat history - all local/personal)
+data/documents/*
+!data/documents/.gitkeep
+data/chroma/
+data/*.db
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+*.log
