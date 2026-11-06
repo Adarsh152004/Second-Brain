@@ -27,6 +27,8 @@ class JEVDecision:
 class JEVDecisionEngine:
     MODEL_PROFILES = {
         "groq": {"model_name": "openai/gpt-oss-120b", "cost_per_1m_in": 0.59, "cost_per_1m_out": 0.79, "avg_latency_ms": 280, "reasoning_score": 0.90, "tool_use_score": 0.92, "speed_score": 0.99},
+        "sambanova": {"model_name": "gemma-4-31B-it", "cost_per_1m_in": 0.10, "cost_per_1m_out": 0.20, "avg_latency_ms": 240, "reasoning_score": 0.93, "tool_use_score": 0.91, "speed_score": 0.98},
+        "bigmodel": {"model_name": "deepseek-v4.1-flash", "cost_per_1m_in": 0.15, "cost_per_1m_out": 0.30, "avg_latency_ms": 320, "reasoning_score": 0.96, "tool_use_score": 0.94, "speed_score": 0.95},
         "gemini": {"model_name": "gemini-2.0-flash", "cost_per_1m_in": 0.10, "cost_per_1m_out": 0.40, "avg_latency_ms": 420, "reasoning_score": 0.92, "tool_use_score": 0.90, "multimodal_score": 0.98},
         "openrouter": {"model_name": "anthropic/claude-3.5-sonnet", "cost_per_1m_in": 3.00, "cost_per_1m_out": 15.00, "avg_latency_ms": 950, "reasoning_score": 0.98, "tool_use_score": 0.96, "coding_score": 0.99},
         "mistral": {"model_name": "mistral-large-latest", "cost_per_1m_in": 2.00, "cost_per_1m_out": 6.00, "avg_latency_ms": 600, "reasoning_score": 0.91, "tool_use_score": 0.88},
@@ -39,157 +41,64 @@ class JEVDecisionEngine:
         self.weights = weights or self.DEFAULT_WEIGHTS
 
     def _evaluate_with_typesafe_jev(self, query: str) -> Optional[Dict[str, Any]]:
-        """
-        Query TypeSafe AI's Jev (System One Decision Model) via official typesafe-sdk
-        or direct TypeSafe AI REST API to return schema-constrained, typed probabilistic decisions.
-        """
-        try:
-            from src.config.settings import settings
-            api_key = os.environ.get("JEV_API_KEY") or os.environ.get("TYPESAFE_API_KEY") or getattr(settings, "jev_api_key", "") or getattr(settings, "typesafe_api_key", "")
-        except Exception:
-            api_key = os.environ.get("JEV_API_KEY") or os.environ.get("TYPESAFE_API_KEY")
-        if not api_key:
-            return None
-
-        model_name = os.environ.get("TYPESAFE_MODEL", "jev-latest")
-
-        # 1. Try official typesafe-sdk if installed
-        try:
-            import typesafe_sdk
-            client = typesafe_sdk.Client(api_key=api_key)
-            res = client.system_one.evaluate(
-                model=model_name,
-                state=query,
-                questions={
-                    "domain": {
-                        "type": "choice",
-                        "choices": ["mathematics", "coding", "database", "web_research", "system_diagnostics", "knowledge_retrieval", "general"]
-                    },
-                    "complexity": {
-                        "type": "choice",
-                        "choices": ["low", "medium", "high"]
-                    },
-                    "needs_calculator": {"type": "boolean"},
-                    "needs_python_interpreter": {"type": "boolean"},
-                    "needs_sqlite": {"type": "boolean"},
-                    "needs_web_search": {"type": "boolean"},
-                    "needs_system_metrics": {"type": "boolean"},
-                    "needs_rag": {"type": "boolean"},
-                    "needs_deep_reasoning": {"type": "boolean"}
-                }
-            )
-            answers = {}
-            if hasattr(res, "answers"):
-                for k, v in res.answers.items():
-                    answers[k] = getattr(v, "value", v)
-            confidence = getattr(res, "confidence", 0.95)
-            return {"source": "typesafe_sdk", "model": model_name, "answers": answers, "confidence": confidence}
-        except ImportError:
-            pass
-        except Exception:
-            pass
-
-        # 2. Try direct HTTP to TypeSafe AI API endpoint or OpenRouter gateway
-        try:
-            import httpx
-            api_url = os.environ.get("TYPESAFE_API_URL", "https://api.typesafe.ai/v1").rstrip("/") + "/system-one/evaluate"
-            payload = {
-                "model": model_name,
-                "state": query,
-                "questions": {
-                    "domain": {
-                        "type": "choice",
-                        "choices": ["mathematics", "coding", "database", "web_research", "system_diagnostics", "knowledge_retrieval", "general"]
-                    },
-                    "complexity": {
-                        "type": "choice",
-                        "choices": ["low", "medium", "high"]
-                    },
-                    "needs_calculator": {"type": "boolean"},
-                    "needs_python_interpreter": {"type": "boolean"},
-                    "needs_sqlite": {"type": "boolean"},
-                    "needs_web_search": {"type": "boolean"},
-                    "needs_system_metrics": {"type": "boolean"},
-                    "needs_rag": {"type": "boolean"},
-                    "needs_deep_reasoning": {"type": "boolean"}
-                }
-            }
-            resp = httpx.post(
-                api_url,
-                json=payload,
-                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-                timeout=1.5
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                return {"source": "typesafe_http_api", "model": model_name, "answers": data.get("answers", {}), "confidence": data.get("confidence", 0.95)}
-        except Exception:
-            pass
-
+        # Bypassed to eliminate the 1.5s blocking network delay on unavailable remote endpoint.
+        # The local sub-millisecond Heuristic Utility Engine completes in <1ms.
         return None
 
-    def phase_1_judgment(self, query: str, context=None):
+    def phase_1_judgment(self, query: str, context=None, preferred_backend: str = None):
         q_lower = query.lower().strip()
         word_count = len(query.split())
 
-        # Check for TypeSafe AI Jev (System One Decision Model)
-        typesafe_eval = self._evaluate_with_typesafe_jev(query)
-        if typesafe_eval and typesafe_eval.get("answers"):
-            answers = typesafe_eval["answers"]
-            domain = answers.get("domain", "general")
-            complexity = answers.get("complexity", "medium")
-            has_math = bool(answers.get("needs_calculator", False))
-            has_code = bool(answers.get("needs_python_interpreter", False))
-            has_db = bool(answers.get("needs_sqlite", False))
-            has_web = bool(answers.get("needs_web_search", False))
-            has_system = bool(answers.get("needs_system_metrics", False))
-            has_doc_rag = bool(answers.get("needs_rag", False))
-            needs_deep = bool(answers.get("needs_deep_reasoning", False))
-            is_greeting = domain == "general" and word_count <= 4
-            engine_source = f"TypeSafe AI Jev ({typesafe_eval['source']})"
-            confidence = typesafe_eval.get("confidence", 0.95)
+        has_math = any(w in q_lower for w in ["calculate", "compute", "equation", "sum of", "percentage", "+", "*", "/", "sqrt", "sin", "cos", "tan", "="]) or bool(re.search(r"\d+\s*[\+\-\*/]\s*\d+", q_lower))
+        has_code = any(w in q_lower for w in ["python", "code", "script", "function", "def ", "class ", "debug", "algorithm", "sql", "regex", "write a program", "traceback"])
+        has_db = any(w in q_lower for w in ["database", "sqlite", "table", "schema", "query table", "select ", "insert into"])
+        has_web = any(w in q_lower for w in ["browse", "url", "http", "website", "latest news", "today", "current weather", "search web"])
+        has_system = any(w in q_lower for w in ["system memory", "cpu usage", "disk space", "hardware", "server metrics", "ram"])
+        has_doc_rag = any(w in q_lower for w in ["in my notes", "second brain", "my document", "what did i write", "search my knowledge"])
+        is_greeting = q_lower in ["hi", "hello", "hey", "good morning", "good evening", "who are you", "what can you do"]
+
+        if word_count > 60 or "compare and analyze" in q_lower or "deep dive" in q_lower:
+            complexity = "high"
+        elif word_count > 20 or has_code or has_math:
+            complexity = "medium"
         else:
-            # Heuristic multi-attribute judgment
-            has_math = any(w in q_lower for w in ["calculate", "compute", "equation", "sum of", "percentage", "+", "*", "/", "sqrt", "sin", "cos", "tan", "="]) or bool(re.search(r"\d+\s*[\+\-\*/]\s*\d+", q_lower))
-            has_code = any(w in q_lower for w in ["python", "code", "script", "function", "def ", "class ", "debug", "algorithm", "sql", "regex", "write a program", "traceback"])
-            has_db = any(w in q_lower for w in ["database", "sqlite", "table", "schema", "query table", "select ", "insert into"])
-            has_web = any(w in q_lower for w in ["browse", "url", "http", "website", "latest news", "today", "current weather", "search web"])
-            has_system = any(w in q_lower for w in ["system memory", "cpu usage", "disk space", "hardware", "server metrics", "ram"])
-            has_doc_rag = any(w in q_lower for w in ["in my notes", "second brain", "my document", "what did i write", "search my knowledge"])
-            is_greeting = q_lower in ["hi", "hello", "hey", "good morning", "good evening", "who are you", "what can you do"]
+            complexity = "low"
 
-            if word_count > 60 or "compare and analyze" in q_lower or "deep dive" in q_lower:
-                complexity = "high"
-            elif word_count > 20 or has_code or has_math:
-                complexity = "medium"
-            else:
-                complexity = "low"
+        domain = "general"
+        if has_math: domain = "mathematics"
+        elif has_code: domain = "coding"
+        elif has_db: domain = "database"
+        elif has_web: domain = "web_research"
+        elif has_system: domain = "system_diagnostics"
+        elif has_doc_rag: domain = "knowledge_retrieval"
+        engine_source = "Heuristic Utility Engine"
+        confidence = 0.92
 
-            domain = "general"
-            if has_math: domain = "mathematics"
-            elif has_code: domain = "coding"
-            elif has_db: domain = "database"
-            elif has_web: domain = "web_research"
-            elif has_system: domain = "system_diagnostics"
-            elif has_doc_rag: domain = "knowledge_retrieval"
-            needs_deep = complexity == "high" or "prove" in q_lower or "architect" in q_lower
-            engine_source = "Heuristic Utility Engine"
-            confidence = 0.88
+        # Respect user preferred backend if specified
+        active_default_model = "groq"
+        if preferred_backend and preferred_backend.lower() not in ("auto", "auto (jev routed)", "default"):
+            active_default_model = preferred_backend.lower()
+        elif os.environ.get("SAMBANOVA_API_KEY"):
+            active_default_model = "sambanova"
+        elif os.environ.get("GROQ_API_KEY"):
+            active_default_model = "groq"
+        elif os.environ.get("GEMINI_API_KEY"):
+            active_default_model = "gemini"
 
         candidate_actions = []
         candidate_actions.append(CandidateAction(
             action_type="direct_chat",
-            recommended_model="groq" if os.environ.get("GROQ_API_KEY") else "gemini",
+            recommended_model=active_default_model,
             expected_accuracy=0.88 if not has_code else 0.80,
             estimated_latency_ms=250,
             estimated_cost_usd=0.00008,
-            reasoning="High-throughput direct stream with Llama-3.3-70b"
+            reasoning=f"High-throughput direct stream with {active_default_model}"
         ))
 
         if has_math:
             candidate_actions.append(CandidateAction(
                 action_type="mcp_tool",
-                recommended_model="groq",
+                recommended_model=active_default_model,
                 target_tool="calculator",
                 expected_accuracy=0.99,
                 estimated_latency_ms=320,
@@ -199,7 +108,7 @@ class JEVDecisionEngine:
         if has_code:
             candidate_actions.append(CandidateAction(
                 action_type="mcp_tool",
-                recommended_model="groq",
+                recommended_model=active_default_model,
                 target_tool="python_interpreter",
                 expected_accuracy=0.96,
                 estimated_latency_ms=450,
@@ -209,7 +118,7 @@ class JEVDecisionEngine:
         if has_db:
             candidate_actions.append(CandidateAction(
                 action_type="mcp_tool",
-                recommended_model="groq",
+                recommended_model=active_default_model,
                 target_tool="sqlite_database_explorer",
                 expected_accuracy=0.95,
                 estimated_latency_ms=380,
@@ -219,7 +128,7 @@ class JEVDecisionEngine:
         if has_web:
             candidate_actions.append(CandidateAction(
                 action_type="mcp_tool",
-                recommended_model="gemini" if os.environ.get("GEMINI_API_KEY") else "groq",
+                recommended_model=active_default_model,
                 target_tool="web_browser_reader",
                 expected_accuracy=0.94,
                 estimated_latency_ms=800,
@@ -229,7 +138,7 @@ class JEVDecisionEngine:
         if has_system:
             candidate_actions.append(CandidateAction(
                 action_type="mcp_tool",
-                recommended_model="groq",
+                recommended_model=active_default_model,
                 target_tool="system_metrics_analyzer",
                 expected_accuracy=0.99,
                 estimated_latency_ms=180,
@@ -239,20 +148,20 @@ class JEVDecisionEngine:
         if has_doc_rag or complexity != "low":
             candidate_actions.append(CandidateAction(
                 action_type="rag_retrieval",
-                recommended_model="groq" if os.environ.get("GROQ_API_KEY") else "gemini",
+                recommended_model=active_default_model,
                 expected_accuracy=0.92,
                 estimated_latency_ms=300,
                 estimated_cost_usd=0.00010,
-                reasoning="ChromaDB semantic document search and ultra-fast synthesis"
+                reasoning=f"Semantic document search with {active_default_model}"
             ))
         if complexity == "high" or "prove" in q_lower or "architect" in q_lower:
             candidate_actions.append(CandidateAction(
                 action_type="deep_reasoning",
-                recommended_model="openrouter" if os.environ.get("OPENROUTER_API_KEY") else "groq",
+                recommended_model=active_default_model,
                 expected_accuracy=0.98,
                 estimated_latency_ms=1200,
                 estimated_cost_usd=0.00150,
-                reasoning="High-tier Claude/GPT-4o synthesis"
+                reasoning=f"High-tier reasoning with {active_default_model}"
             ))
 
         return {
@@ -268,15 +177,20 @@ class JEVDecisionEngine:
             "candidate_actions": candidate_actions
         }
 
-    def phase_2_evaluation(self, judgment_state: Dict[str, Any]):
+    def phase_2_evaluation(self, judgment_state: Dict[str, Any], preferred_backend: str = None):
         candidates: List[CandidateAction] = judgment_state["candidate_actions"]
         w_acc = self.weights.get("accuracy", 0.45)
         w_spd = self.weights.get("speed", 0.25)
         w_cst = self.weights.get("cost_efficiency", 0.15)
         w_fit = self.weights.get("context_fit", 0.15)
 
+        is_explicit = preferred_backend and preferred_backend.lower() not in ("auto", "auto (jev routed)", "default")
+
         ranked = []
         for c in candidates:
+            if is_explicit:
+                c.recommended_model = preferred_backend.lower()
+
             speed_score = max(0.1, 1.0 - (c.estimated_latency_ms / 2000.0))
             cost_score = max(0.1, 1.0 - (c.estimated_cost_usd / 0.002))
             fit_score = 0.95 if (c.action_type == "mcp_tool" and c.target_tool) or (c.action_type == "direct_chat" and judgment_state["complexity"] == "low") else 0.85
@@ -297,7 +211,8 @@ class JEVDecisionEngine:
 
         ranked.sort(key=lambda x: x["expected_utility"], reverse=True)
         candidates.sort(key=lambda x: x.expected_utility, reverse=True)
-        best_candidate = candidates[0] if candidates else CandidateAction(action_type="direct_chat", recommended_model="groq", reasoning="Default direct chat")
+        fallback_model = preferred_backend.lower() if is_explicit else "groq"
+        best_candidate = candidates[0] if candidates else CandidateAction(action_type="direct_chat", recommended_model=fallback_model, reasoning="Default direct chat")
         return best_candidate, ranked
 
     def phase_3_verification(self, best_candidate: CandidateAction, query: str):
@@ -310,15 +225,23 @@ class JEVDecisionEngine:
             reasons.append("Potential prompt injection pattern detected in input state.")
 
         model = best_candidate.recommended_model
-        env_map = {"groq": "GROQ_API_KEY", "gemini": "GEMINI_API_KEY", "openrouter": "OPENROUTER_API_KEY", "mistral": "MISTRAL_API_KEY", "cloudflare": "CLOUDFLARE_API_KEY"}
+        env_map = {
+            "groq": "GROQ_API_KEY",
+            "sambanova": "SAMBANOVA_API_KEY",
+            "bigmodel": "BIGMODEL_API_KEY",
+            "gemini": "GEMINI_API_KEY",
+            "openrouter": "OPENROUTER_API_KEY",
+            "mistral": "MISTRAL_API_KEY",
+            "cloudflare": "CF_API_TOKEN"
+        }
         required_env = env_map.get(model)
         if required_env and not os.environ.get(required_env):
             flags.append("FALLBACK_API_KEY_UNAVAILABLE_" + model.upper())
             reasons.append(required_env + " is not set. Fallback to active backend required.")
-            if os.environ.get("GROQ_API_KEY"):
-                best_candidate.recommended_model = "groq"
-            elif os.environ.get("GEMINI_API_KEY"):
-                best_candidate.recommended_model = "gemini"
+            for fb in ["sambanova", "groq", "gemini"]:
+                if os.environ.get(env_map.get(fb, "")):
+                    best_candidate.recommended_model = fb
+                    break
 
         try:
             from src.observability.cost_tracker import check_budget_status
@@ -344,8 +267,9 @@ class JEVDecisionEngine:
 
     def decide(self, query: str, context=None, user_preferences=None, **kwargs):
         start_time = time.perf_counter()
-        judgment = self.phase_1_judgment(query, context)
-        best_candidate, ranked_candidates = self.phase_2_evaluation(judgment)
+        preferred_backend = user_preferences.get("backend") if user_preferences else None
+        judgment = self.phase_1_judgment(query, context, preferred_backend=preferred_backend)
+        best_candidate, ranked_candidates = self.phase_2_evaluation(judgment, preferred_backend=preferred_backend)
         verification = self.phase_3_verification(best_candidate, query)
         elapsed_ms = (time.perf_counter() - start_time) * 1000.0
 

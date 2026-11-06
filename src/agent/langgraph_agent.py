@@ -148,14 +148,14 @@ async def run_agent(
     # --- Tool Execution: RAG Knowledge Retrieval ---
     should_rag = _detect_rag_intent(message, use_rag) or (jev_decision.selected_action.action_type == "rag_retrieval")
     docs = []
-    try:
-        retrieved = search(message, top_k=4)
-        if retrieved:
-            if should_rag or (retrieved[0].get("score", 0) > 0.35):
+    if should_rag:
+        try:
+            retrieved = search(message, top_k=4)
+            if retrieved:
                 docs = retrieved
                 waterfall.append({"stage": "Knowledge Retrieval", "duration_ms": 25.0, "status": f"{len(docs)} chunks"})
-    except Exception as e:
-        logger.warning(f"RAG search error: {e}")
+        except Exception as e:
+            logger.warning(f"RAG search error: {e}")
 
     # --- Tool Execution: MCP (Math, Python, SQLite) ---
     tool_used = None
@@ -359,10 +359,10 @@ async def stream_agent(
     # --- Tool Execution: Automatic RAG Knowledge Retrieval ---
     should_rag = _detect_rag_intent(message, use_rag) or (jev_decision.selected_action.action_type == "rag_retrieval")
     docs = []
-    try:
-        retrieved = search(message, top_k=4)
-        if retrieved:
-            if should_rag or (retrieved[0].get("score", 0) > 0.35):
+    if should_rag:
+        try:
+            retrieved = search(message, top_k=4)
+            if retrieved:
                 docs = retrieved
                 waterfall.append({"stage": "Knowledge Retrieval", "duration_ms": 25.0, "status": f"{len(docs)} chunks"})
                 yield {
@@ -371,8 +371,8 @@ async def stream_agent(
                     "count": len(docs),
                     "documents": [d.get("title", "Document") for d in docs]
                 }
-    except Exception as e:
-        logger.warning(f"RAG search error: {e}")
+        except Exception as e:
+            logger.warning(f"RAG search error: {e}")
 
     # --- Tool Execution: MCP Tools (calculator, python, sqlite, metrics) ---
     tool_used = None

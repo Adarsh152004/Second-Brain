@@ -231,7 +231,7 @@ export default function Home() {
           use_rag: activeToolsRef.current.rag || !!attachedDocRef.current,
           use_web: activeToolsRef.current.web,
           preferred_backend:
-            selectedModelRef.current !== "Auto (JEV Routed)"
+            !selectedModelRef.current.startsWith("Auto")
               ? selectedModelRef.current
               : undefined,
         }),
@@ -267,14 +267,18 @@ export default function Home() {
 
   // Automatically sync model name from latest JEV decision in message parts
   useEffect(() => {
-    if (messages.length > 0) {
+    // Only sync auto-routed model indicator when user has explicitly selected Auto mode
+    if (messages.length > 0 && selectedModel.startsWith("Auto")) {
       for (let i = messages.length - 1; i >= 0; i--) {
         const m = messages[i];
         if (m.role === "assistant") {
           const dec = getMessageDecision(m);
           if (dec) {
             const mName = dec.recommended_model || dec.selected_model || dec.model;
-            if (mName && mName !== selectedModel) setSelectedModel(mName);
+            if (mName && mName !== selectedModel) {
+              // Keep Auto as prefix so user knows it's auto-routed
+              setSelectedModel(`Auto (${mName})`);
+            }
             break;
           }
         }
