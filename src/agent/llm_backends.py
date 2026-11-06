@@ -51,6 +51,22 @@ PROVIDERS = [
         "best_for": "Zero cold start, edge execution, global CDN",
     },
     {
+        "id": "sambanova",
+        "name": "SambaNova SN40L",
+        "model": getattr(settings, 'sambanova_model', 'gemma-4-31B-it'),
+        "badge": "Dataflow LPU",
+        "color": "#ec4899",
+        "best_for": "Fast open-weights, Gemma, LLaMA-3.3, high throughput",
+    },
+    {
+        "id": "bigmodel",
+        "name": "BigModel (DeepSeek)",
+        "model": getattr(settings, 'bigmodel_model', 'deepseek-v4.1-flash'),
+        "badge": "DeepSeek V4",
+        "color": "#0ea5e9",
+        "best_for": "DeepSeek V4 flash, deep reasoning, code generation",
+    },
+    {
         "id": "ollama",
         "name": "Ollama (Local)",
         "model": getattr(settings, 'ollama_model', 'llama3.2'),
@@ -372,8 +388,138 @@ class OllamaBackend(LLMBackend):
                         except Exception:
                             pass
 
+class SambaNovaBackend(LLMBackend):
+    name = "sambanova"
+
+    def _resolve_model(self, model: str = None) -> str:
+        m = model or getattr(settings, 'sambanova_model', 'gemma-4-31B-it')
+        if m in ['auto', 'default']:
+            return 'gemma-4-31B-it'
+        return m
+
+    async def chat(self, messages: list[dict], system: str = None, model: str = None) -> str:
+        if not settings.sambanova_api_key:
+            raise ValueError("SAMBANOVA_API_KEY is not configured.")
+        all_msgs = []
+        if system:
+            all_msgs.append({"role": "system", "content": system})
+        all_msgs.extend(messages)
+        req_model = self._resolve_model(model)
+        headers = {
+            "Authorization": f"Bearer {settings.sambanova_api_key}",
+            "Content-Type": "application/json"
+        }
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            resp = await client.post(
+                "https://api.sambanova.ai/v1/chat/completions",
+                json={"model": req_model, "messages": all_msgs, "temperature": 0.7, "max_tokens": 2048},
+                headers=headers,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            return data["choices"][0]["message"]["content"]
+
+    async def stream_chat(self, messages: list[dict], system: str = None, model: str = None) -> AsyncGenerator[str, None]:
+        if not settings.sambanova_api_key:
+            raise ValueError("SAMBANOVA_API_KEY is not configured.")
+        all_msgs = []
+        if system:
+            all_msgs.append({"role": "system", "content": system})
+        all_msgs.extend(messages)
+        req_model = self._resolve_model(model)
+        headers = {
+            "Authorization": f"Bearer {settings.sambanova_api_key}",
+            "Content-Type": "application/json"
+        }
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            async with client.stream(
+                "POST",
+                "https://api.sambanova.ai/v1/chat/completions",
+                json={"model": req_model, "messages": all_msgs, "temperature": 0.7, "max_tokens": 2048, "stream": True},
+                headers=headers,
+            ) as resp:
+                resp.raise_for_status()
+                async for line in resp.aiter_lines():
+                    if line.startswith("data: ") and line.strip() != "data: [DONE]":
+                        try:
+                            chunk = json.loads(line[6:])
+                            delta = chunk.get("choices", [{}])[0].get("delta", {})
+                            content = delta.get("content", "")
+                            if content:
+                                yield content
+                        except Exception:
+                            pass
+
+
+class BigModelBackend(LLMBackend):
+    name = "bigmodel"
+
+    def _resolve_model(self, model: str = None) -> str:
+        m = model or getattr(settings, 'bigmodel_model', 'deepseek-v4.1-flash')
+        if m in ['auto', 'default']:
+            return 'deepseek-v4.1-flash'
+        return m
+
+    async def chat(self, messages: list[dict], system: str = None, model: str = None) -> str:
+        if not settings.bigmodel_api_key:
+            raise ValueError("BIGMODEL_API_KEY is not configured.")
+        all_msgs = []
+        if system:
+            all_msgs.append({"role": "system", "content": system})
+        all_msgs.extend(messages)
+        req_model = self._resolve_model(model)
+        headers = {
+            "Authorization": f"Bearer {settings.bigmodel_api_key}",
+            "Content-Type": "application/json"
+        }
+        url = f"{settings.bigmodel_url.rstrip('/')}/chat/completions"
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            resp = await client.post(
+                url,
+                json={"model": req_model, "messages": all_msgs, "temperature": 0.7, "max_tokens": 2048},
+                headers=headers,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            return data["choices"][0]["message"]["content"]
+
+    async def stream_chat(self, messages: list[dict], system: str = None, model: str = None) -> AsyncGenerator[str, None]:
+        if not settings.bigmodel_api_key:
+            raise ValueError("BIGMODEL_API_KEY is not configured.")
+        all_msgs = []
+        if system:
+            all_msgs.append({"role": "system", "content": system})
+        all_msgs.extend(messages)
+        req_model = self._resolve_model(model)
+        headers = {
+            "Authorization": f"Bearer {settings.bigmodel_api_key}",
+            "Content-Type": "application/json"
+        }
+        url = f"{settings.bigmodel_url.rstrip('/')}/chat/completions"
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            async with client.stream(
+                "POST",
+                url,
+                json={"model": req_model, "messages": all_msgs, "temperature": 0.7, "max_tokens": 2048, "stream": True},
+                headers=headers,
+            ) as resp:
+                resp.raise_for_status()
+                async for line in resp.aiter_lines():
+                    if line.startswith("data: ") and line.strip() != "data: [DONE]":
+                        try:
+                            chunk = json.loads(line[6:])
+                            delta = chunk.get("choices", [{}])[0].get("delta", {})
+                            content = delta.get("content", "")
+                            if content:
+                                yield content
+                        except Exception:
+                            pass
+
+
 BACKENDS: Dict[str, LLMBackend] = {
     "groq": GroqBackend(),
+    "sambanova": SambaNovaBackend(),
+    "bigmodel": BigModelBackend(),
     "gemini": GeminiBackend(),
     "openrouter": OpenRouterBackend(),
     "mistral": MistralBackend(),
@@ -393,7 +539,7 @@ async def route_chat(
     priority = []
     if preferred_backend and preferred_backend.lower() in BACKENDS:
         priority.append(preferred_backend.lower())
-    for b in ["groq", "gemini", "openrouter", "mistral", "cloudflare", "ollama"]:
+    for b in ["groq", "sambanova", "bigmodel", "gemini", "openrouter", "mistral", "cloudflare", "ollama"]:
         if b not in priority:
             priority.append(b)
 
@@ -417,7 +563,7 @@ async def stream_route_chat(
     priority = []
     if preferred_backend and preferred_backend.lower() in BACKENDS:
         priority.append(preferred_backend.lower())
-    for b in ["groq", "gemini", "openrouter", "mistral", "cloudflare", "ollama"]:
+    for b in ["groq", "sambanova", "bigmodel", "gemini", "openrouter", "mistral", "cloudflare", "ollama"]:
         if b not in priority:
             priority.append(b)
 

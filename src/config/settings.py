@@ -32,6 +32,15 @@ class Settings(BaseSettings):
     cf_api_token: str = ""
     cf_model: str = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
 
+    # SambaNova Cloud
+    sambanova_api_key: str = ""
+    sambanova_model: str = "gemma-4-31B-it"
+
+    # BigModel (DeepSeek)
+    bigmodel_api_key: str = ""
+    bigmodel_model: str = "deepseek-v4.1-flash"
+    bigmodel_url: str = "https://bigmodel.io/v1"
+
     # Vercel AI Gateway / Custom OpenAI compatible
     vercel_ai_key: str = ""
     vercel_ai_url: str = "https://gateway.ai.cloudflare.com/v1"
@@ -69,12 +78,20 @@ class Settings(BaseSettings):
     chunk_overlap: int = 150
     retrieval_top_k: int = 5
 
-    # Storage
+    # Storage (SQLite & Chroma)
     chroma_path: str = "./data/chroma"
     documents_path: str = "./data/documents"
     memory_db_path: str = "./data/memory.db"
     memory_max_turns: int = 30
     max_upload_mb: int = 30
+
+    # Production Database (Supabase PostgreSQL)
+    database_url: str = ""
+    postgres_host: str = "db.xybusfywybuxejnohkcd.supabase.co"
+    postgres_port: int = 5432
+    postgres_db: str = "postgres"
+    postgres_user: str = "postgres"
+    postgres_password: str = ""
 
     # Server
     uvicorn_host: str = "0.0.0.0"

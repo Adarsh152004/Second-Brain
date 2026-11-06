@@ -1,4 +1,4 @@
-"""Multi-Tiered Response & Tool Cache (Exact, Semantic & Prompt Prefix) with Persistent SQLite Storage."""
+"""Multi-Tiered Response & Tool Cache (Exact, Semantic & Prompt Prefix) with PostgreSQL & SQLite Storage."""
 import time
 import hashlib
 import math
@@ -9,6 +9,8 @@ from typing import Dict, Any, Optional, Tuple, List
 from src.embeddings.cohere_embeddings import embed_query
 from src.config.settings import settings
 from src.utils.logging import get_logger
+from src.db.connection import is_postgres_configured
+import src.db.cache_pg as pg_cache
 
 logger = get_logger(__name__)
 
@@ -45,6 +47,8 @@ def _get_db():
             ttl INTEGER DEFAULT 86400
         )
     """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_cache_type_key ON cache_entries(cache_type, cache_key)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_cache_expiry ON cache_entries(timestamp, ttl)")
     conn.commit()
     return conn
 
@@ -244,6 +248,22 @@ def set_cached_response(
         "tokens": tokens,
     })
 
+    # Persist to PostgreSQL if configured
+    if is_postgres_configured():
+        try:
+            pg_cache.set_cache_entry(
+                cache_type="exact",
+                cache_key=k1,
+                query=query,
+                model=model,
+                response_data=data,
+                tokens_saved=tokens,
+                ttl_seconds=ttl,
+                embedding=vec if vec else None
+            )
+        except Exception as e:
+            logger.debug(f"Failed to persist cache entry to Postgres: {e}")
+
     # Persist to SQLite
     try:
         data_str = json.dumps(data)
@@ -345,4 +365,13 @@ def clear_cache():
             conn.commit()
     except Exception as e:
         logger.warning(f"Failed to clear SQLite cache: {e}")
+
+    if is_postgres_configured():
+        try:
+            from src.db.connection import get_db_cursor
+            with get_db_cursor() as cur:
+                cur.execute("DELETE FROM public.llm_cache;")
+        except Exception as e:
+            logger.warning(f"Failed to clear Postgres cache: {e}")
+
     logger.info("All caches cleared.")

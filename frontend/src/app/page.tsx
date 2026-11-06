@@ -1939,20 +1939,43 @@ export default function Home() {
                   color: "var(--text-secondary)",
                 }}
               >
-                LIVE MODEL PREFERENCES
+                LIVE MODEL PREFERENCES (Click to Switch)
               </div>
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", fontSize: "12px" }}>
-                <span style={{ background: "rgba(16,163,127,0.15)", color: "#34d399", padding: "3px 8px", borderRadius: "4px" }}>
-                  Gemini 2.5 Flash
+                <span
+                  onClick={() => { setSelectedModel("Auto (JEV Routed)"); setJevStudioOpen(false); }}
+                  style={{ background: "rgba(16,163,127,0.15)", color: "#34d399", padding: "4px 9px", borderRadius: "4px", cursor: "pointer" }}
+                  title="Auto route using Joint Expected Value"
+                >
+                  ⚡ Auto (JEV Routed)
                 </span>
-                <span style={{ background: "rgba(59,130,246,0.15)", color: "#60a5fa", padding: "3px 8px", borderRadius: "4px" }}>
-                  GPT-4o Mini
+                <span
+                  onClick={() => { setSelectedModel("sambanova"); setJevStudioOpen(false); }}
+                  style={{ background: "rgba(236,72,153,0.15)", color: "#f472b6", padding: "4px 9px", borderRadius: "4px", cursor: "pointer" }}
+                  title="Force SambaNova SN40L (Gemma 4)"
+                >
+                  🌸 SambaNova (SN40L)
                 </span>
-                <span style={{ background: "rgba(217,119,6,0.15)", color: "#fbbf24", padding: "3px 8px", borderRadius: "4px" }}>
-                  Claude 3.5 Sonnet
+                <span
+                  onClick={() => { setSelectedModel("bigmodel"); setJevStudioOpen(false); }}
+                  style={{ background: "rgba(14,165,233,0.15)", color: "#38bdf8", padding: "4px 9px", borderRadius: "4px", cursor: "pointer" }}
+                  title="Force BigModel (DeepSeek V4.1)"
+                >
+                  🔮 BigModel (DeepSeek)
                 </span>
-                <span style={{ background: "rgba(139,92,246,0.15)", color: "#a78bfa", padding: "3px 8px", borderRadius: "4px" }}>
-                  Llama 3.3 70B
+                <span
+                  onClick={() => { setSelectedModel("groq"); setJevStudioOpen(false); }}
+                  style={{ background: "rgba(249,115,22,0.15)", color: "#fb923c", padding: "4px 9px", borderRadius: "4px", cursor: "pointer" }}
+                  title="Force Groq LPU"
+                >
+                  🚀 Groq LPU
+                </span>
+                <span
+                  onClick={() => { setSelectedModel("gemini"); setJevStudioOpen(false); }}
+                  style={{ background: "rgba(59,130,246,0.15)", color: "#60a5fa", padding: "4px 9px", borderRadius: "4px", cursor: "pointer" }}
+                  title="Force Gemini Flash"
+                >
+                  ✨ Gemini Flash
                 </span>
               </div>
             </div>
@@ -2491,6 +2514,45 @@ export default function Home() {
                   <i className="fa-solid fa-server" style={{ color: "#a855f7" }}></i>
                   <span>Open Model Context Protocol (MCP) Server</span>
                 </div>
+              </div>
+              <div
+                className="command-item"
+                onClick={() => {
+                  setCommandPaletteOpen(false);
+                  setSelectedModel("sambanova");
+                }}
+              >
+                <div className="command-item-left">
+                  <i className="fa-solid fa-microchip" style={{ color: "#ec4899" }}></i>
+                  <span>Switch Model: SambaNova SN40L (Gemma 4)</span>
+                </div>
+                <span className="command-kbd">SN40L</span>
+              </div>
+              <div
+                className="command-item"
+                onClick={() => {
+                  setCommandPaletteOpen(false);
+                  setSelectedModel("bigmodel");
+                }}
+              >
+                <div className="command-item-left">
+                  <i className="fa-solid fa-brain" style={{ color: "#0ea5e9" }}></i>
+                  <span>Switch Model: BigModel (DeepSeek V4.1)</span>
+                </div>
+                <span className="command-kbd">DeepSeek</span>
+              </div>
+              <div
+                className="command-item"
+                onClick={() => {
+                  setCommandPaletteOpen(false);
+                  setSelectedModel("Auto (JEV Routed)");
+                }}
+              >
+                <div className="command-item-left">
+                  <i className="fa-solid fa-bolt" style={{ color: "#10a37f" }}></i>
+                  <span>Switch Model: Auto (JEV Routing)</span>
+                </div>
+                <span className="command-kbd">Auto</span>
               </div>
 
               {sessions.length > 0 && (

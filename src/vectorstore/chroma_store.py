@@ -1,10 +1,12 @@
-"""ChromaDB vector store using Cohere embeddings."""
+"""Dual Vector Store: Supabase pgvector when configured, with seamless ChromaDB fallback."""
 import uuid
 import chromadb
 from chromadb.config import Settings as ChromaSettings
 from src.config.settings import settings
 from src.embeddings.cohere_embeddings import embed_texts, embed_query
 from src.utils.logging import get_logger
+from src.db.connection import is_postgres_configured, ensure_postgres_schema
+import src.db.vector_pg as pg_vector
 
 logger = get_logger(__name__)
 _client = None
@@ -26,10 +28,26 @@ def _get_collection():
 
 
 def upsert_chunks(doc_id: str, chunks: list[str], metadata: dict):
-    col = _get_collection()
     if not chunks:
         return
     embeddings = embed_texts(chunks, input_type="search_document")
+
+    if is_postgres_configured():
+        try:
+            ensure_postgres_schema()
+            chunk_objs = []
+            for i, chunk_text in enumerate(chunks):
+                chunk_objs.append({
+                    "text": chunk_text,
+                    "embedding": embeddings[i] if embeddings and i < len(embeddings) else []
+                })
+            title = metadata.get("title") or metadata.get("filename") or doc_id
+            pg_vector.upsert_chunks(doc_id, chunk_objs, title=title, metadata=metadata)
+            return
+        except Exception as e:
+            logger.warning(f"pgvector upsert failed, falling back to Chroma: {e}")
+
+    col = _get_collection()
     ids = [f"{doc_id}_{i}" for i in range(len(chunks))]
     metas = [{**metadata, "chunk_index": i, "doc_id": doc_id} for i in range(len(chunks))]
     col.upsert(ids=ids, embeddings=embeddings, documents=chunks, metadatas=metas)
@@ -78,6 +96,35 @@ class SimpleBM25:
 
 def search(query: str, top_k: int = None, hybrid: bool = True) -> list[dict]:
     top_k = top_k or settings.retrieval_top_k
+
+    if is_postgres_configured():
+        try:
+            ensure_postgres_schema()
+            q_emb = embed_query(query)
+            pg_results = pg_vector.search(q_emb, top_k=top_k * 2)
+            if pg_results:
+                if not hybrid or len(pg_results) <= 1:
+                    return pg_results[:top_k]
+
+                # RRF re-ranking with BM25
+                corpus = [c["text"] for c in pg_results]
+                bm25 = SimpleBM25(corpus)
+                bm25_scores = bm25.get_scores(query)
+                bm25_ranked = sorted(range(len(corpus)), key=lambda i: bm25_scores[i], reverse=True)
+                bm25_ranks = {idx: rank for rank, idx in enumerate(bm25_ranked)}
+
+                fused = []
+                for dense_rank, c in enumerate(pg_results):
+                    sparse_rank = bm25_ranks.get(dense_rank, dense_rank)
+                    rrf = (0.6 / (60 + dense_rank)) + (0.4 / (60 + sparse_rank))
+                    c["score"] = round(min(1.0, (c.get("score", 0.5) * 0.7) + (rrf * 15)), 4)
+                    c["retrieval_mode"] = "pgvector_hybrid"
+                    fused.append(c)
+                fused.sort(key=lambda x: x["score"], reverse=True)
+                return fused[:top_k]
+        except Exception as e:
+            logger.warning(f"pgvector search failed, falling back to Chroma: {e}")
+
     col = _get_collection()
     if col.count() == 0:
         return []
@@ -137,6 +184,12 @@ def search(query: str, top_k: int = None, hybrid: bool = True) -> list[dict]:
 
 def get_document_chunks(doc_id: str) -> list[dict]:
     """Retrieve all individual chunks for a specific document to inspect."""
+    if is_postgres_configured():
+        try:
+            return pg_vector.get_document_chunks(doc_id)
+        except Exception as e:
+            logger.warning(f"pgvector get_document_chunks failed, falling back to Chroma: {e}")
+
     col = _get_collection()
     results = col.get(where={"doc_id": doc_id}, include=["documents", "metadatas"])
     if not results or not results.get("ids"):
@@ -162,6 +215,12 @@ def get_document_chunks(doc_id: str) -> list[dict]:
 
 
 def list_documents() -> list[dict]:
+    if is_postgres_configured():
+        try:
+            return pg_vector.list_documents()
+        except Exception as e:
+            logger.warning(f"pgvector list_documents failed, falling back to Chroma: {e}")
+
     col = _get_collection()
     if col.count() == 0:
         return []
@@ -196,6 +255,12 @@ list_docs = list_documents
 
 
 def delete_document(doc_id: str):
+    if is_postgres_configured():
+        try:
+            return pg_vector.delete_document(doc_id)
+        except Exception as e:
+            logger.warning(f"pgvector delete_document failed, falling back to Chroma: {e}")
+
     col = _get_collection()
     results = col.get(where={"doc_id": doc_id})
     if not results or not results.get("ids"):

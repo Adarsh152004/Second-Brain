@@ -43,13 +43,30 @@ async def root():
 @app.get("/health")
 async def health():
     from src.config.settings import settings
+    from src.db.connection import ping_postgres, is_postgres_configured
+    pg_info = ping_postgres() if is_postgres_configured() else {"configured": False, "status": "unconfigured"}
     return {
         "api": "ok",
         "llm_backend": settings.llm_backend,
         "groq_configured": bool(settings.groq_api_key),
+        "sambanova_configured": bool(settings.sambanova_api_key),
+        "bigmodel_configured": bool(settings.bigmodel_api_key),
         "tavily_configured": bool(settings.tavily_api_key),
         "evaluation_system": "active",
-        "observability_system": "active"
+        "observability_system": "active",
+        "database": {
+            "primary": "supabase_postgres" if is_postgres_configured() else "sqlite",
+            "postgres": pg_info
+        }
+    }
+
+
+@app.get("/db/status")
+async def db_status():
+    from src.db.connection import ping_postgres, is_postgres_configured
+    return {
+        "is_configured": is_postgres_configured(),
+        "details": ping_postgres()
     }
 
 

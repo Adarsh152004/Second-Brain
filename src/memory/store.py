@@ -1,4 +1,4 @@
-"""SQLite-backed conversation memory store with full Session Threading and Turn Metadata Persistence."""
+"""Dual Storage Memory Engine: Supabase PostgreSQL when configured, with seamless SQLite fallback."""
 import sqlite3
 import time
 import uuid
@@ -6,6 +6,8 @@ import json
 from typing import List, Dict, Any, Optional
 from src.config.settings import settings
 from src.utils.logging import get_logger
+from src.db.connection import is_postgres_configured, ensure_postgres_schema
+import src.db.memory_pg as pg_store
 
 logger = get_logger(__name__)
 
@@ -69,6 +71,13 @@ def _conn():
         """)
         conn.commit()
 
+    # Ensure performance indexes (Supabase/Postgres query optimization best practice)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_turns_session_id ON turns(session_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_turns_session_recent ON turns(session_id, id DESC)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_turns_first_user_msg ON turns(session_id, role, id ASC)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_sessions_updated_at ON sessions(updated_at DESC)")
+    conn.commit()
+
     return conn
 
 
@@ -88,6 +97,13 @@ def _clean_title(text: str) -> str:
 
 
 def create_session(session_id: Optional[str] = None, title: str = "New Chat") -> dict:
+    if is_postgres_configured():
+        try:
+            ensure_postgres_schema()
+            return pg_store.create_session(session_id, title)
+        except Exception as e:
+            logger.warning(f"Postgres create_session failed, falling back to SQLite: {e}")
+
     sid = session_id or f"sess_{uuid.uuid4().hex[:12]}"
     with _conn() as conn:
         conn.execute(
@@ -98,6 +114,13 @@ def create_session(session_id: Optional[str] = None, title: str = "New Chat") ->
 
 
 def list_sessions() -> List[Dict[str, Any]]:
+    if is_postgres_configured():
+        try:
+            ensure_postgres_schema()
+            return pg_store.list_sessions()
+        except Exception as e:
+            logger.warning(f"Postgres list_sessions failed, falling back to SQLite: {e}")
+
     with _conn() as conn:
         conn.execute("""
             INSERT OR IGNORE INTO sessions (id, title, updated_at)
@@ -139,6 +162,13 @@ def list_sessions() -> List[Dict[str, Any]]:
 
 
 def get_session(session_id: str) -> dict:
+    if is_postgres_configured():
+        try:
+            ensure_postgres_schema()
+            return pg_store.get_session(session_id)
+        except Exception as e:
+            logger.warning(f"Postgres get_session failed, falling back to SQLite: {e}")
+
     with _conn() as conn:
         row = conn.execute("SELECT id, title, created_at, updated_at FROM sessions WHERE id=?", (session_id,)).fetchone()
         if not row:
@@ -159,12 +189,24 @@ def get_session(session_id: str) -> dict:
 
 
 def update_session_title(session_id: str, title: str) -> bool:
+    if is_postgres_configured():
+        try:
+            return pg_store.update_session_title(session_id, title)
+        except Exception as e:
+            logger.warning(f"Postgres update_session_title failed, falling back to SQLite: {e}")
+
     with _conn() as conn:
         cur = conn.execute("UPDATE sessions SET title=?, updated_at=CURRENT_TIMESTAMP WHERE id=?", (title.strip()[:80], session_id))
         return cur.rowcount > 0
 
 
 def delete_session(session_id: str) -> bool:
+    if is_postgres_configured():
+        try:
+            return pg_store.delete_session(session_id)
+        except Exception as e:
+            logger.warning(f"Postgres delete_session failed, falling back to SQLite: {e}")
+
     with _conn() as conn:
         conn.execute("DELETE FROM turns WHERE session_id=?", (session_id,))
         conn.execute("DELETE FROM sessions WHERE id=?", (session_id,))
@@ -172,6 +214,14 @@ def delete_session(session_id: str) -> bool:
 
 
 def save_turn(session_id: str, role: str, content: str, decision: Any = None, sources: Any = None):
+    if is_postgres_configured():
+        try:
+            ensure_postgres_schema()
+            pg_store.save_turn(session_id, role, content, decision, sources)
+            return
+        except Exception as e:
+            logger.warning(f"Postgres save_turn failed, falling back to SQLite: {e}")
+
     with _conn() as conn:
         # Check if session exists
         row = conn.execute("SELECT title FROM sessions WHERE id=?", (session_id,)).fetchone()
@@ -223,6 +273,12 @@ def add(session_id: str, role: str, content: str, decision: Any = None, sources:
 
 
 def get_recent(session_id: str, limit: int = None) -> List[Dict[str, Any]]:
+    if is_postgres_configured():
+        try:
+            return pg_store.get_recent(session_id, limit or settings.memory_max_turns)
+        except Exception as e:
+            logger.warning(f"Postgres get_recent failed, falling back to SQLite: {e}")
+
     max_turns = limit or settings.memory_max_turns
     with _conn() as conn:
         try:
@@ -264,6 +320,13 @@ def get_recent(session_id: str, limit: int = None) -> List[Dict[str, Any]]:
 
 
 def clear(session_id: str):
+    if is_postgres_configured():
+        try:
+            pg_store.clear(session_id)
+            return
+        except Exception as e:
+            logger.warning(f"Postgres clear failed, falling back to SQLite: {e}")
+
     with _conn() as conn:
         conn.execute("DELETE FROM turns WHERE session_id=?", (session_id,))
         conn.execute("UPDATE sessions SET updated_at=CURRENT_TIMESTAMP WHERE id=?", (session_id,))

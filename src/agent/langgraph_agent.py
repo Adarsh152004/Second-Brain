@@ -88,9 +88,14 @@ async def run_agent(
             "is_safe": False
         }
 
-    cached = get_cached_response(message, target_model)
-    if not cached:
-        cached = get_semantic_cached_response(message, target_model)
+    # Dynamic intents (web search, live temporal queries, document RAG queries) must bypass cache lookup
+    is_dynamic_query = use_web or use_rag or _detect_web_intent(message, use_web) or _detect_rag_intent(message, use_rag)
+
+    cached = None
+    if not is_dynamic_query:
+        cached = get_cached_response(message, target_model)
+        if not cached:
+            cached = get_semantic_cached_response(message, target_model)
 
     if cached:
         lat_ms = (time.time() - t_start) * 1000.0
@@ -219,7 +224,12 @@ async def run_agent(
 
     store.save_turn(session_id, "user", message)
     store.save_turn(session_id, "assistant", answer, decision=jev_decision.judgment, sources=all_sources)
-    set_cached_response(message, {"answer": answer, "sources": all_sources}, used_model, tokens=total_tok)
+
+    has_dynamic_context = bool(docs) or bool(web_results) or bool(tool_output) or is_dynamic_query
+    if not has_dynamic_context:
+        set_cached_response(message, {"answer": answer, "sources": all_sources}, used_model, tokens=total_tok)
+    else:
+        logger.info(f"Skipping cache write for dynamic query (docs={len(docs)}, web={len(web_results)}, tool={bool(tool_used)})")
 
     return {
         "answer": answer, "sources": all_sources,
@@ -259,9 +269,14 @@ async def stream_agent(
         yield {"type": "done", "trace_id": trace_id, "latency_ms": d1, "cost_usd": 0.0, "waterfall": waterfall, "is_safe": False}
         return
 
-    cached = get_cached_response(message, target_model)
-    if not cached:
-        cached = get_semantic_cached_response(message, target_model)
+    # Dynamic intents (web search, live temporal queries, document RAG queries) must bypass cache lookup
+    is_dynamic_query = use_web or use_rag or _detect_web_intent(message, use_web) or _detect_rag_intent(message, use_rag)
+
+    cached = None
+    if not is_dynamic_query:
+        cached = get_cached_response(message, target_model)
+        if not cached:
+            cached = get_semantic_cached_response(message, target_model)
 
     if cached:
         lat_ms = (time.time() - t_start) * 1000.0
@@ -463,7 +478,12 @@ At the very end of your response, always provide 2 to 3 concise, highly relevant
 
     store.save_turn(session_id, "user", message)
     store.save_turn(session_id, "assistant", full_answer, decision=jev_payload, sources=all_sources)
-    set_cached_response(message, {"answer": full_answer, "sources": all_sources}, used_model, tokens=total_tok)
+
+    has_dynamic_context = bool(docs) or bool(web_results) or bool(tool_output) or is_dynamic_query
+    if not has_dynamic_context:
+        set_cached_response(message, {"answer": full_answer, "sources": all_sources}, used_model, tokens=total_tok)
+    else:
+        logger.info(f"Skipping cache write for dynamic stream query (docs={len(docs)}, web={len(web_results)}, tool={bool(tool_used)})")
 
     yield {
         "type": "done", "trace_id": trace_id, "latency_ms": round(lat_ms, 1),

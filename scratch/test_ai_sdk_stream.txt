@@ -1,8 +1,8 @@
 data: {"type": "data-jev", "data": {"recommended_model": "llama-3.3-70b", "expected_utility": 0.92}}
 
-data: {"type": "tool-input-available", "toolCallId": "call_fe0181", "toolName": "web_search", "input": {}, "title": "Searching web..."}
+data: {"type": "tool-input-available", "toolCallId": "call_af87cc", "toolName": "web_search", "input": {}, "title": "Searching web..."}
 
-data: {"type": "tool-output-available", "toolCallId": "call_1685cc", "output": {"type": "tool_use", "tool": "web_search", "count": 2}}
+data: {"type": "tool-output-available", "toolCallId": "call_76b40d", "output": {"type": "tool_use", "tool": "web_search", "count": 2}}
 
 data: {"type": "text-start", "id": "part-0"}
 
@@ -24,7 +24,7 @@ data: {"type": "text-delta", "id": "part-0", "delta": " SDK!"}
 
 data: {"type": "text-end", "id": "part-0"}
 
-data: {"type": "source-url", "sourceId": "src_2277aa", "url": "https://example.com", "title": "Test Source"}
+data: {"type": "source-url", "sourceId": "src_64b2c0", "url": "https://example.com", "title": "Test Source"}
 
 data: {"type": "data-telemetry", "data": {"trace_id": "tr-12345", "latency_ms": 350.2, "cost_usd": 0.0001}}
 

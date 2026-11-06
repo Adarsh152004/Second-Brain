@@ -5,6 +5,7 @@ from src.ingestion.loaders import load_file_content, load_text, load_url
 from src.utils.logging import get_logger
 from src.utils.textsplit import split_text
 from src.vectorstore import chroma_store
+from src.observability.cache import clear_cache
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -18,6 +19,8 @@ async def _ingest(doc_id: str, title: str, raw_text: str, filename: str = "") ->
         # Single chunk fallback
         chunks = [raw_text[:2000]]
     chroma_store.upsert_chunks(doc_id, chunks, {"title": title, "doc_id": doc_id, "filename": filename or title})
+    # Invalidate response cache so subsequent queries reflect new document contents
+    clear_cache()
     return {
         "status": "success",
         "doc_id": doc_id,
@@ -77,4 +80,6 @@ async def get_document_chunks(doc_id: str):
 @router.delete("/documents/{doc_id}")
 async def delete_document(doc_id: str):
     chroma_store.delete_document(doc_id)
+    # Invalidate response cache so deleted documents are not served from stale cache
+    clear_cache()
     return {"status": "deleted", "doc_id": doc_id}
