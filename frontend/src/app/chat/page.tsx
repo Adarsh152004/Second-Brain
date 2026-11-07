@@ -451,6 +451,48 @@ export default function ChatWorkspace() {
             />
           </div>
 
+          {/* Navigation to Platform Features */}
+          <div className="px-3 pb-2 space-y-0.5 text-xs">
+            <Link
+              href="/knowledge"
+              className="flex items-center justify-between px-2.5 py-1.5 rounded-xl text-[#9d9d96] hover:bg-[#222220] hover:text-[#ececeb] transition"
+            >
+              <span className="flex items-center gap-2">
+                <span>📚</span>
+                <span>Knowledge Base</span>
+              </span>
+              <span className="text-[10px] text-[#cc785c] font-mono">54 chk</span>
+            </Link>
+            <Link
+              href="/studio"
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-[#9d9d96] hover:bg-[#222220] hover:text-[#ececeb] transition"
+            >
+              <span>⚡</span>
+              <span>JEV Decision Studio</span>
+            </Link>
+            <Link
+              href="/tools"
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-[#9d9d96] hover:bg-[#222220] hover:text-[#ececeb] transition"
+            >
+              <span>🛠️</span>
+              <span>Tools &amp; MCP</span>
+            </Link>
+            <Link
+              href="/observability"
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-[#9d9d96] hover:bg-[#222220] hover:text-[#ececeb] transition"
+            >
+              <span>📊</span>
+              <span>Observability</span>
+            </Link>
+            <Link
+              href="/settings"
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-[#9d9d96] hover:bg-[#222220] hover:text-[#ececeb] transition"
+            >
+              <span>⚙️</span>
+              <span>Settings &amp; BYOK</span>
+            </Link>
+          </div>
+
           {/* Chat Sessions List */}
           <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
             <div className="text-[10px] uppercase tracking-wider font-semibold text-[#73736c] px-2 py-1">

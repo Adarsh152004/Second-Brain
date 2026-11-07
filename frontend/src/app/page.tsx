@@ -22,15 +22,21 @@ export default function LandingPage() {
           </Link>
 
           <div className="hidden md:flex items-center gap-6 text-sm text-[#9d9d96]">
-            <a href="#capabilities" className="hover:text-[#ececeb] transition">
-              Capabilities
-            </a>
-            <a href="#architecture" className="hover:text-[#ececeb] transition">
-              JEV Routing
-            </a>
-            <a href="#memory" className="hover:text-[#ececeb] transition">
-              Supabase Memory
-            </a>
+            <Link href="/chat" className="hover:text-[#ececeb] transition">
+              Chat
+            </Link>
+            <Link href="/knowledge" className="hover:text-[#ececeb] transition">
+              Knowledge Base
+            </Link>
+            <Link href="/studio" className="hover:text-[#ececeb] transition">
+              JEV Studio
+            </Link>
+            <Link href="/tools" className="hover:text-[#ececeb] transition">
+              Tools &amp; MCP
+            </Link>
+            <Link href="/observability" className="hover:text-[#ececeb] transition">
+              Observability
+            </Link>
             <a href="#pricing" className="hover:text-[#ececeb] transition">
               Pricing
             </a>
