@@ -985,10 +985,12 @@ export default function Home() {
       <aside id="sidebar" className={sidebarOpen ? "open" : "collapsed"}>
         <div className="sidebar-brand-row">
           <div className="sidebar-brand" onClick={handleNewChatClick}>
-            <img src="/logo.svg" alt="Second Brain" className="sidebar-logo-img" />
+            <div style={{ width: "28px", height: "28px", background: "var(--accent-primary)", color: "#ffffff", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: "15px", boxShadow: "0 2px 6px rgba(204,120,92,0.3)" }}>
+              ⎔
+            </div>
             <div className="sidebar-brand-text">
               <span className="sidebar-brand-name">Second Brain</span>
-              <span className="sidebar-brand-tag">AI</span>
+              <span className="sidebar-brand-tag" style={{ background: "rgba(204,120,92,0.15)", color: "var(--accent-primary)", border: "1px solid rgba(204,120,92,0.3)" }}>AI</span>
             </div>
           </div>
           <button
@@ -1158,9 +1160,11 @@ export default function Home() {
             >
               <i className="fa-solid fa-bars"></i>
             </button>
-            <div className="topbar-brand" onClick={handleNewChatClick}>
-              <img src="/logo.svg" alt="Second Brain" className="topbar-logo-img" />
-              <span className="topbar-brand-title">Second Brain</span>
+            <div className="topbar-brand" onClick={handleNewChatClick} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+              <div style={{ width: "22px", height: "22px", background: "var(--accent-primary)", color: "#ffffff", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: "12px" }}>
+                ⎔
+              </div>
+              <span className="topbar-brand-title" style={{ fontWeight: 600, fontSize: "14px" }}>Second Brain</span>
             </div>
             <div
               className="model-selector-pill"
@@ -1217,61 +1221,61 @@ export default function Home() {
             {messages.length === 0 ? (
               <div className="welcome-container" id="welcome-screen">
                 <div className="welcome-icon">
-                  <img src="/logo.svg" alt="Second Brain" className="welcome-logo-img" />
+                  ⎔
                 </div>
-                <h1 className="welcome-title">What can I help you with today?</h1>
+                <h1 className="welcome-title">How can Second Brain assist your thinking today?</h1>
                 <p className="welcome-subtitle">
-                  Autonomous Multi-LLM intelligence with automatic RAG document retrieval &amp; real-time web search.
+                  Autonomous Multi-LLM intelligence with Supabase pgvector retrieval, sandboxed Python, and real-time JEV routing.
                 </p>
                 <div className="suggestion-grid">
                   <div
                     className="suggestion-card"
                     onClick={() =>
-                      sendMessage("Explain Quantum Computing superposition simply")
+                      sendMessage("Optimize our PostgreSQL database schema with pgvector HNSW indexing, and show the exact migration script.")
                     }
                   >
-                    <div className="sug-title">&#9883; Quantum Computing</div>
+                    <div className="sug-title">⚡ PostgreSQL &amp; Vector Indexing</div>
                     <div className="sug-desc">
-                      Explain superposition and entanglement simply
+                      Optimize pgvector cosine similarity search with HNSW index parameters
                     </div>
                   </div>
                   <div
                     className="suggestion-card"
                     onClick={() =>
                       sendMessage(
-                        "Write a clean Python script for async web scraping with error retry"
+                        "Summarize the core technical findings from the attached document and extract actionable takeaways."
                       )
                     }
                   >
-                    <div className="sug-title">&#128013; Python Scripting</div>
+                    <div className="sug-title">📚 Grounded Document Research</div>
                     <div className="sug-desc">
-                      Async web scraper with rate limiting and exponential backoff
+                      Synthesize knowledge with verified source chunk citations
                     </div>
                   </div>
                   <div
                     className="suggestion-card"
                     onClick={() =>
                       sendMessage(
-                        "What are the latest AI news and updates from this week?"
+                        "Execute a Python simulation computing the expected latency utility curve for 10k requests across 4 models."
                       )
                     }
                   >
-                    <div className="sug-title">&#127760; Live Web Search</div>
+                    <div className="sug-title">🧮 Sandboxed Python Computation</div>
                     <div className="sug-desc">
-                      Automatically queries live web search for real-time news
+                      Execute calculations, data modeling, and mathematical proofs
                     </div>
                   </div>
                   <div
                     className="suggestion-card"
                     onClick={() =>
                       sendMessage(
-                        "Draft a concise executive summary for an AI architectural migration"
+                        "What are the latest developments in AI model routing and reasoning benchmarks this week?"
                       )
                     }
                   >
-                    <div className="sug-title">&#128195; Executive Summary</div>
+                    <div className="sug-title">🌐 Live Web Synthesis</div>
                     <div className="sug-desc">
-                      High-level architecture proposal with cost estimation
+                      Cross-reference live facts using Tavily search integration
                     </div>
                   </div>
                 </div>
@@ -1315,8 +1319,8 @@ export default function Home() {
                     className="message-row assistant-row"
                     id={msg.id}
                   >
-                    <div className="msg-avatar assistant-avatar">
-                      <img src="/logo.svg" alt="SB" style={{ width: "20px", height: "20px" }} />
+                    <div className="msg-avatar assistant-avatar" style={{ fontSize: "16px", fontWeight: "bold" }}>
+                      ⎔
                     </div>
                     <div
                       className="msg-bubble-wrap"
