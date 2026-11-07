@@ -56,13 +56,19 @@ body {
   font-family: var(--font-sans);
   background-color: var(--bg-main);
   color: var(--text-main);
-  height: 100vh;
-  height: 100dvh;
-  min-height: -webkit-fill-available;
-  display: flex;
-  overflow: hidden;
+  min-height: 100vh;
+  min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.chat-app-root {
+  display: flex;
+  height: 100vh;
+  height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
 }
 
 /* SIDEBAR */
