@@ -10,8 +10,16 @@ const nextConfig: NextConfig = {
         destination: "http://127.0.0.1:8000/voice/:path*",
       },
       {
-        source: "/chat/:path*",
-        destination: "http://127.0.0.1:8000/chat/:path*",
+        source: "/chat/sessions/:path*",
+        destination: "http://127.0.0.1:8000/chat/sessions/:path*",
+      },
+      {
+        source: "/chat/sessions",
+        destination: "http://127.0.0.1:8000/chat/sessions",
+      },
+      {
+        source: "/chat/stream",
+        destination: "http://127.0.0.1:8000/chat/stream",
       },
       {
         source: "/mcp/:path*",

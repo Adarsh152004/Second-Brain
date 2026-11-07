@@ -36,6 +36,7 @@ export default function RootLayout({
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
         />
+        <script src="https://cdn.tailwindcss.com"></script>
       </head>
       <body>{children}</body>
     </html>
